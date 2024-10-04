@@ -23,7 +23,7 @@ export default function Topbar() {
           href="#"
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
-          <Image src={TailwindLogo} width={24} height={24} />
+          <Image src={TailwindLogo} alt="Logo do Windcolor UI" width={24} height={24} />
           <span>WindHeu UI</span>
         </Link>
         <Link
@@ -58,7 +58,7 @@ export default function Topbar() {
               href="#"
               className="flex items-center gap-2 text-lg font-semibold"
             >
-              <Image src={TailwindLogo} width={24} height={24} />
+              <Image src={TailwindLogo} alt="Logo Windcolor UI" width={24} height={24} />
               <span>WindHeu UI</span>
             </Link>
             <Link

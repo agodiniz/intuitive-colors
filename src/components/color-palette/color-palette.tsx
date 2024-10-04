@@ -1,10 +1,12 @@
 "use client";
 
 import { useEffect, useState } from "react";
+import namer from "color-namer";
+
 import { Input } from "@/components/ui/input";
+import { useToast } from "@/hooks/use-toast";
 
 import { Lock } from "lucide-react";
-import { useToast } from "@/hooks/use-toast";
 
 // Função para converter Hex para HSL
 const hexToHSL = (hex: string) => {
@@ -137,7 +139,7 @@ const validateInputColor = (
   const inputColorHex = hslToHex(h, s, l); // Converte HSL de volta para HEX para comparação
 
   // Verifica se a cor de input está na escala
-  for (let key in scale) {
+  for (const key in scale) {
     const hslValues = scale[key]
       .match(/\d+/g)
       ?.map((value) => parseInt(value, 10)) as [number, number, number];
@@ -154,6 +156,7 @@ const validateInputColor = (
 export default function ColorPalette() {
   const [inputColor, setInputColor] = useState<string>(""); // Cor inicial
   const [colorScale, setColorScale] = useState<{ [key: string]: string }>({});
+  const [colorName, setColorName] = useState<string>("");
   const [error, setError] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
@@ -166,6 +169,7 @@ export default function ColorPalette() {
   // Função para gerar a escala de cores
   const generateColorScale = (color: string) => {
     try {
+      // eslint-disable-next-line @typescript-eslint/no-unused-vars
       const { h, s, l } = hexToHSL(color); // Converte Hex para HSL
       let scale = generatePalette(h, s, l); // Gera a paleta de cores com base em HSL
 
@@ -173,9 +177,13 @@ export default function ColorPalette() {
       scale = insertInputColorInScale(color, scale, h, s, l);
 
       setColorScale(scale); // Atualiza a paleta
+
+      // Obter o nome da cor usando color-namer
+      const colorNames = namer(color).pantone[0].name; // Pega o primeiro nome da lista
+      setColorName(colorNames); // Define o nome da cor no estado
+
       setError("");
     } catch (error) {
-      console.error("Cor inválida", error);
       setError("Cor inválida. Por favor, insira um valor HEX válido.");
     }
   };
@@ -287,8 +295,11 @@ export default function ColorPalette() {
         </div>
       </div>
       {error && <p className="text-red-500">{error}</p>}
-      <div className="flex w-full">
-        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1 mt-8">
+      <div className="flex flex-col gap-4 w-full">
+        <h4 className="scroll-m-20 text-lg font-semibold tracking-tight text-gray-600">
+          {colorName}
+        </h4>
+        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
           {Object.entries(colorScale).map(([key, color]) => {
             const textColor =
               Number(key) <= 400 ? colorScale["950"] : colorScale["50"];
@@ -302,6 +313,9 @@ export default function ColorPalette() {
             // Comparar a cor HEX da paleta com o inputColor
             const isInputColor =
               hexValue.toLowerCase() === inputColor.toLowerCase();
+
+            // Verificar se esta cor é a que foi copiada
+            const isCopiedColor = hexValue === copiedColor;
 
             return (
               <div key={key} className="text-center">
