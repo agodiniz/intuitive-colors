@@ -4,6 +4,7 @@ import { useEffect, useState } from "react";
 import { Input } from "@/components/ui/input";
 
 import { Lock } from "lucide-react";
+import { useToast } from "@/hooks/use-toast";
 
 // Função para converter Hex para HSL
 const hexToHSL = (hex: string) => {
@@ -155,6 +156,9 @@ export default function ColorPalette() {
   const [colorScale, setColorScale] = useState<{ [key: string]: string }>({});
   const [error, setError] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
+  const [copiedColor, setCopiedColor] = useState<string | null>(null);
+
+  const { toast } = useToast();
 
   const handleFocus = () => setIsFocused(true);
   const handleBlur = () => setIsFocused(false);
@@ -186,6 +190,21 @@ export default function ColorPalette() {
     const newColor = e.target.value;
     setInputColor(newColor);
     generateColorScale(newColor); // Gera a nova escala de cores
+  };
+
+  // Função para copiar a cor ao clicar na paleta
+  const handleCopyColor = (hexValue: string) => {
+    navigator.clipboard.writeText(hexValue).then(() => {
+      setCopiedColor(hexValue); // Define a cor copiada
+
+      // Exibe o toast quando a cor for copiada
+      toast({
+        title: `${hexValue} copied to clipboard!`,
+        duration: 3000,
+      });
+
+      setTimeout(() => setCopiedColor(null), 2000); // Remove o aviso após 2 segundos
+    });
   };
 
   useEffect(() => {
@@ -268,7 +287,7 @@ export default function ColorPalette() {
         </div>
       </div>
       {error && <p className="text-red-500">{error}</p>}
-      <div className="flex w-full p-4">
+      <div className="flex w-full">
         <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1 mt-8">
           {Object.entries(colorScale).map(([key, color]) => {
             const textColor =
@@ -289,6 +308,7 @@ export default function ColorPalette() {
                 <div
                   className="w-full h-24 rounded-lg cursor-pointer relative"
                   style={{ backgroundColor: color }}
+                  onClick={() => handleCopyColor(hexValue)}
                 >
                   <div className="flex flex-col h-full justify-end items-center gap-1 pb-3">
                     {isInputColor && (
@@ -307,7 +327,7 @@ export default function ColorPalette() {
                       {`${color}`}
                     </p> */}
                     <p
-                      className="text-[11px] uppercase"
+                      className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px]"
                       style={{ color: textColor }}
                     >
                       {`${hexValue}`}
