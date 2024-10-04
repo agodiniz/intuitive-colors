@@ -10,7 +10,7 @@ import {
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
 import { CircleUser, Menu } from "lucide-react";
-import TailwindLogo from "@/public/images/Tailwind-CSS.png";
+import TailwindLogo from "@/public/images/tailwind-css.png";
 
 import Link from "next/link";
 import Image from "next/image";
