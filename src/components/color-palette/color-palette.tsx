@@ -202,7 +202,8 @@ export default function ColorPalette() {
             const hexValue = chroma(color).hex();
 
             const isInputColor =
-              hexValue.toLowerCase() === inputColor.toLowerCase();
+              getColorInFormat(hexValue, format).toLowerCase() ===
+              getColorInFormat(inputColor, format).toLowerCase();
             const isCopiedColor = hexValue === copiedColor;
 
             return (
