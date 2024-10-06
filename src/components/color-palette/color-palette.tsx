@@ -15,8 +15,16 @@ import {
   DropdownMenuTrigger,
   DropdownMenuSeparator,
 } from "@/components/ui/dropdown-menu";
+import {
+  Dialog,
+  DialogContent,
+  DialogDescription,
+  DialogHeader,
+  DialogTitle,
+  DialogTrigger,
+} from "@/components/ui/dialog";
 
-import { ChevronsUpDown, Lock } from "lucide-react";
+import { ChevronsUpDown, Clipboard, Lock } from "lucide-react";
 import { Button } from "../ui/button";
 
 const generatePalette = (inputColor: string) => {
@@ -65,6 +73,7 @@ export default function ColorPalette() {
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
   const [hovered, setHovered] = useState<boolean>(false);
   const [format, setFormat] = useState<string>("hex"); // Estado para controlar o formato
+  const [modalOpen, setModalOpen] = useState<boolean>(false); // Estado do modal
 
   const { toast } = useToast();
 
@@ -93,6 +102,48 @@ export default function ColorPalette() {
     const newColor = e.target.value;
     setInputColor(newColor);
     generateColorScale(newColor);
+  };
+
+  const tailwindFormat = (colors: { [key: string]: string }) => {
+    const toKebabCase = (str: string) => {
+      return str
+        .replace(/([a-z])([A-Z])/g, "$1-$2") // Adiciona hífen entre letras minúsculas e maiúsculas
+        .replace(/\s+/g, "-") // Substitui espaços por hífen
+        .toLowerCase(); // Converte tudo para minúsculas
+    };
+
+    const kebabColorName = toKebabCase(colorName); // Converte o nome da cor para kebab-case
+    return `'${kebabColorName}': {
+      50: '${colors[50]}',
+      100: '${colors[100]}',
+      200: '${colors[200]}',
+      300: '${colors[300]}',
+      400: '${colors[400]}',
+      500: '${colors[500]}',
+      600: '${colors[600]}',
+      700: '${colors[700]}',
+      800: '${colors[800]}',
+      900: '${colors[900]}',
+    }`;
+  };
+
+  const handleCopyPalette = () => {
+    const paletteString = tailwindFormat(colorScale);
+    navigator.clipboard
+      .writeText(paletteString)
+      .then(() => {
+        toast({
+          title: "Code copied to clipboard!",
+          duration: 3000,
+        });
+      })
+      .catch((error) => {
+        console.error("Failed to copy: ", error);
+        toast({
+          title: "Failed to copy to clipboard.",
+          duration: 3000,
+        });
+      });
   };
 
   const handleCopyColor = (color: string) => {
@@ -192,9 +243,39 @@ export default function ColorPalette() {
       </div>
 
       <div className="flex flex-col gap-4 w-full">
-        <h4 className="scroll-m-20 text-lg font-semibold tracking-tight text-gray-600">
-          {colorName}
-        </h4>
+        <div className="flex justify-between items-center w-full">
+          <h4 className="scroll-m-20 text-lg font-semibold tracking-tight text-gray-600">
+            {colorName}
+          </h4>
+          <div className="flex justify-center items-center">
+            <Button variant="ghost" onClick={() => setModalOpen(true)}>
+              Code
+            </Button>
+
+            <Dialog open={modalOpen} onOpenChange={setModalOpen}>
+              <DialogContent className="px-0 pt-4">
+                <DialogHeader className="px-4 pb-4 border-b border-gray-100">
+                  <DialogTitle>Copy code</DialogTitle>
+                </DialogHeader>
+                <div className="w-full px-4 relative">
+                  <pre className="bg-secondary p-4 rounded-md text-sm">
+                    {tailwindFormat(colorScale)}
+                  </pre>
+                  <div className="absolute top-0 right-5">
+                    <Button
+                      variant="ghost"
+                      size="icon"
+                      className="text-primary"
+                    >
+                      <Clipboard width={16} onClick={handleCopyPalette} />
+                    </Button>
+                  </div>
+                </div>
+              </DialogContent>
+            </Dialog>
+          </div>
+        </div>
+
         <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
           {Object.entries(colorScale).map(([key, color]) => {
             const textColor =
