@@ -6,60 +6,54 @@ import chroma from "chroma-js";
 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuLabel,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+  DropdownMenuSeparator,
+} from "@/components/ui/dropdown-menu";
 
-import { Lock } from "lucide-react";
+import { ChevronsUpDown, Lock } from "lucide-react";
+import { Button } from "../ui/button";
 
-// Função para determinar a posição na paleta com base na luminosidade
-const determinePositionInScale = (l: number) => {
-  if (l >= 90) return 50;
-  if (l >= 80) return 100;
-  if (l >= 70) return 200;
-  if (l >= 60) return 300;
-  if (l >= 50) return 400;
-  if (l >= 40) return 500;
-  if (l >= 30) return 600;
-  if (l >= 20) return 700;
-  if (l >= 10) return 800;
-  return 900;
-};
-
-// Função para gerar a paleta de cores com chroma.js, incluindo o inputColor na escala
 const generatePalette = (inputColor: string) => {
   const palette: { [key: string]: string } = {};
 
-  // Gera uma escala usando chroma.js, interpolando cores ao redor do inputColor
   const scale = chroma
     .scale([
-      chroma(inputColor).brighten(2),
+      chroma(inputColor).brighten(2.5),
       inputColor,
       chroma(inputColor).darken(2),
     ])
-    .mode("lab") // Modo de interpolação suave
-    .colors(10); // Gera 9 cores (para 100-900)
+    .mode("lab")
+    .colors(11);
 
-  // Mapear cada cor gerada para uma chave de 100 a 900
-  const labels = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+  const labels = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900, 950];
   labels.forEach((label, i) => {
     palette[label] = scale[i];
   });
 
-  // Adiciona explicitamente o inputColor no nível 500
   palette[500] = chroma(inputColor).hex();
 
   return palette;
 };
 
-// Função para validar se a cor do input está na paleta
-const validateInputColor = (
-  inputColor: string,
-  scale: { [key: string]: string }
-): boolean => {
-  const inputColorHex = chroma(inputColor).hex(); // Usa chroma.js para converter para HEX
-
-  // Verifica se a cor de input está na escala
-  return Object.values(scale).some(
-    (color) => chroma(color).hex() === inputColorHex
-  );
+const getColorInFormat = (color: string, format: string) => {
+  switch (format) {
+    case "rgb":
+      return chroma(color).css(); // Retorna em formato RGB
+    case "hsl":
+      const hsl = chroma(color).hsl();
+      return `hsl(${Math.round(hsl[0])}, ${Math.round(
+        hsl[1] * 100
+      )}%, ${Math.round(hsl[2] * 100)}%)`; // Retorna em formato HSL
+    case "hex":
+    default:
+      return chroma(color).hex(); // Retorna em formato HEX
+  }
 };
 
 export default function ColorPalette() {
@@ -70,21 +64,20 @@ export default function ColorPalette() {
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
   const [hovered, setHovered] = useState<boolean>(false);
+  const [format, setFormat] = useState<string>("hex"); // Estado para controlar o formato
 
   const { toast } = useToast();
 
   const handleFocus = () => setIsFocused(true);
   const handleBlur = () => setIsFocused(false);
 
-  // Função para gerar a escala de cores
   const generateColorScale = (color: string) => {
     try {
-      const scale = generatePalette(color); // Gera a paleta de cores com chroma.js
-      setColorScale(scale); // Atualiza a paleta
+      const scale = generatePalette(color);
+      setColorScale(scale);
 
-      // Obter o nome da cor usando color-namer
-      const colorNames = namer(color).pantone[0].name; // Pega o primeiro nome da lista
-      setColorName(colorNames); // Define o nome da cor no estado
+      const colorNames = namer(color).pantone[0].name;
+      setColorName(colorNames);
 
       setError("");
     } catch (error) {
@@ -92,39 +85,38 @@ export default function ColorPalette() {
     }
   };
 
-  // Gera a escala inicial de cores ao montar o componente
   useEffect(() => {
     generateColorScale(inputColor);
   }, [inputColor]);
 
-  // Função para lidar com a mudança do color picker
   const handleColorChange = (e: React.ChangeEvent<HTMLInputElement>) => {
     const newColor = e.target.value;
     setInputColor(newColor);
-    generateColorScale(newColor); // Gera a nova escala de cores
+    generateColorScale(newColor);
   };
 
-  // Função para copiar a cor ao clicar na paleta
-  const handleCopyColor = (hexValue: string) => {
-    navigator.clipboard.writeText(hexValue).then(() => {
-      setCopiedColor(hexValue); // Define a cor copiada
-
-      // Exibe o toast quando a cor for copiada
+  const handleCopyColor = (color: string) => {
+    const formattedColor = getColorInFormat(color, format);
+    navigator.clipboard.writeText(formattedColor).then(() => {
+      setCopiedColor(formattedColor);
       toast({
-        title: `${hexValue} copiado para a área de transferência!`,
+        title: `${formattedColor} copied to clipboard!`,
         duration: 3000,
       });
-
-      setTimeout(() => setCopiedColor(null), 2000); // Remove o aviso após 2 segundos
+      setTimeout(() => setCopiedColor(null), 2000);
     });
   };
 
   useEffect(() => {
-    // Gerar cor aleatória ao carregar a página
     const randomColor = chroma.random().hex();
-    setInputColor(randomColor); // Define a cor inicial
-    generateColorScale(randomColor); // Gera a escala de cores
+    setInputColor(randomColor);
+    generateColorScale(randomColor);
   }, []);
+
+  const handleFormatChange = (value: string) => {
+    setFormat(value); // Atualiza o formato
+    setInputColor(getColorInFormat(inputColor, value)); // Converte a cor para o novo formato // Converte a cor para o novo formato
+  };
 
   return (
     <div className="max-w-5xl px-6 pb-12 mx-auto space-y-8">
@@ -133,7 +125,7 @@ export default function ColorPalette() {
           <div className="absolute left-3">
             <div
               id="color-picker-wrapper"
-              className={`rounded-full border-2 border-background p-2 transition-all duration-200 ${
+              className={`rounded-full border-2 border-background cursor-pointer transition-all duration-200 ${
                 isFocused ? "ring-offset-2" : ""
               }`}
               style={{
@@ -153,47 +145,74 @@ export default function ColorPalette() {
                 type="color"
                 value={inputColor}
                 onChange={handleColorChange}
-                className="w-[28px] h-[28px] opacity-0 cursor-pointer"
+                className="w-full h-full opacity-0 cursor-pointer"
                 onFocus={handleFocus}
                 onBlur={handleBlur}
               />
             </div>
           </div>
+
+          {/* DropdownMenu para selecionar formato */}
+          <div className="absolute right-3">
+            <DropdownMenu>
+              <DropdownMenuTrigger asChild>
+                <Button variant="ghost" className="gap-2 rounded-full">
+                  {format.toUpperCase()}
+                  <ChevronsUpDown width={16} height={16} />
+                </Button>
+              </DropdownMenuTrigger>
+              <DropdownMenuContent className="">
+                <DropdownMenuLabel>Type</DropdownMenuLabel>
+                <DropdownMenuSeparator />
+                <DropdownMenuRadioGroup
+                  value={format}
+                  onValueChange={handleFormatChange}
+                >
+                  <DropdownMenuRadioItem value="hex" className="cursor-pointer">
+                    HEX
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="rgb" className="cursor-pointer">
+                    RGB
+                  </DropdownMenuRadioItem>
+                  <DropdownMenuRadioItem value="hsl" className="cursor-pointer">
+                    HSL
+                  </DropdownMenuRadioItem>
+                </DropdownMenuRadioGroup>
+              </DropdownMenuContent>
+            </DropdownMenu>
+          </div>
+
           <Input
             value={inputColor}
             onChange={handleColorChange}
             placeholder="Enter HEX, RGB, or HSL"
-            className="font-semibold w-full h-[54px] pl-12 rounded-full shadow-2xl border-gray-100"
+            className="font-semibold w-full h-[54px] pl-12 rounded-full shadow-2xl border-gray-100 hover:border-gray-200"
           />
         </div>
       </div>
-      {error && <p className="text-red-500">{error}</p>}
+
       <div className="flex flex-col gap-4 w-full">
         <h4 className="scroll-m-20 text-lg font-semibold tracking-tight text-gray-600">
           {colorName}
         </h4>
-        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-9 gap-1">
+        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
           {Object.entries(colorScale).map(([key, color]) => {
             const textColor =
-              Number(key) <= 400 ? colorScale["900"] : colorScale["50"];
+              Number(key) <= 500 ? colorScale["900"] : colorScale["50"];
+            const hexValue = chroma(color).hex();
 
-            const hexValue = chroma(color).hex(); // Converter para HEX usando chroma.js
-
-            // Comparar a cor HEX da paleta com o inputColor
             const isInputColor =
               hexValue.toLowerCase() === inputColor.toLowerCase();
-
-            // Verificar se esta cor é a que foi copiada
             const isCopiedColor = hexValue === copiedColor;
 
             return (
               <div key={key} className="text-center">
-                <div
-                  className="w-full h-24 rounded-lg cursor-pointer relative"
+                <Button
+                  className="w-full h-24 rounded-lg cursor-pointer relative shadow-none"
                   style={{ backgroundColor: color }}
                   onClick={() => handleCopyColor(hexValue)}
                 >
-                  <div className="flex flex-col h-full justify-end items-center gap-1 pb-3">
+                  <div className="flex flex-col h-full justify-end items-center gap-1">
                     {isInputColor && (
                       <div
                         className="relative flex items-center justify-center"
@@ -203,10 +222,9 @@ export default function ColorPalette() {
                         {!hovered && (
                           <Lock width={16} style={{ color: textColor }} />
                         )}
-                        {/* Tooltip - "Locked" aparece quando hover */}
                         {hovered && (
                           <p
-                            className="text-[11px] capitalize sm:text-[9.5px] md:text-[11px]"
+                            className="text-xs font-semibold capitalize"
                             style={{ color: textColor }}
                           >
                             Locked
@@ -221,13 +239,13 @@ export default function ColorPalette() {
                       {`${key}`}
                     </p>
                     <p
-                      className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px]"
+                      className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px] md:w-[62px] md:truncate"
                       style={{ color: textColor }}
                     >
-                      {`${hexValue}`}
+                      {getColorInFormat(hexValue, format)}
                     </p>
                   </div>
-                </div>
+                </Button>
               </div>
             );
           })}
