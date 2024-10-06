@@ -2,63 +2,12 @@
 
 import { useEffect, useState } from "react";
 import namer from "color-namer";
+import chroma from "chroma-js";
 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
 
 import { Lock } from "lucide-react";
-
-// Função para converter Hex para HSL
-const hexToHSL = (hex: string) => {
-  hex = hex.replace(/^#/, "");
-
-  if (hex.length === 3) {
-    hex = hex
-      .split("")
-      .map((h) => h + h)
-      .join("");
-  }
-
-  const bigint = parseInt(hex, 16);
-  const r = (bigint >> 16) & 255;
-  const g = (bigint >> 8) & 255;
-  const b = bigint & 255;
-
-  const rPercent = r / 255;
-  const gPercent = g / 255;
-  const bPercent = b / 255;
-
-  const max = Math.max(rPercent, gPercent, bPercent);
-  const min = Math.min(rPercent, gPercent, bPercent);
-  let h: number | undefined = 0;
-  let s: number | undefined = 0;
-  let l = (max + min) / 2;
-
-  if (max === min) {
-    h = s = 0; // Achromatic
-  } else {
-    const d = max - min;
-    s = l > 0.5 ? d / (2 - max - min) : d / (max + min);
-    switch (max) {
-      case rPercent:
-        h = (gPercent - bPercent) / d + (gPercent < bPercent ? 6 : 0);
-        break;
-      case gPercent:
-        h = (bPercent - rPercent) / d + 2;
-        break;
-      case bPercent:
-        h = (rPercent - gPercent) / d + 4;
-        break;
-    }
-    h /= 6;
-  }
-
-  h = Math.round(h * 360);
-  s = Math.round(s * 100);
-  l = Math.round(l * 100);
-
-  return { h, s, l };
-};
 
 // Função para determinar a posição na paleta com base na luminosidade
 const determinePositionInScale = (l: number) => {
@@ -74,60 +23,30 @@ const determinePositionInScale = (l: number) => {
   return 900;
 };
 
-// Função para gerar a paleta de cores com base no HSL
-const generatePalette = (h: number, s: number, l: number) => {
+// Função para gerar a paleta de cores com chroma.js, incluindo o inputColor na escala
+const generatePalette = (inputColor: string) => {
   const palette: { [key: string]: string } = {};
-  const steps = [95, 85, 75, 65, 55, 45, 35, 25, 15, 5]; // Luminosidades para 50 a 950
-  const labels = [50, 100, 200, 300, 400, 500, 600, 700, 800, 900];
 
-  for (let i = 0; i < steps.length; i++) {
-    palette[labels[i]] = `hsl(${h}, ${s}%, ${steps[i]}%)`;
-  }
+  // Gera uma escala usando chroma.js, interpolando cores ao redor do inputColor
+  const scale = chroma
+    .scale([
+      chroma(inputColor).brighten(2),
+      inputColor,
+      chroma(inputColor).darken(2),
+    ])
+    .mode("lab") // Modo de interpolação suave
+    .colors(10); // Gera 9 cores (para 100-900)
+
+  // Mapear cada cor gerada para uma chave de 100 a 900
+  const labels = [100, 200, 300, 400, 500, 600, 700, 800, 900];
+  labels.forEach((label, i) => {
+    palette[label] = scale[i];
+  });
+
+  // Adiciona explicitamente o inputColor no nível 500
+  palette[500] = chroma(inputColor).hex();
 
   return palette;
-};
-
-// Função para converter HSL para Hex
-const hslToHex = (h: number, s: number, l: number) => {
-  s /= 100;
-  l /= 100;
-
-  const k = (n: number) => (n + h / 30) % 12;
-  const a = s * Math.min(l, 1 - l);
-  const f = (n: number) =>
-    Math.round(
-      255 * (l - a * Math.max(-1, Math.min(k(n) - 3, Math.min(9 - k(n), 1))))
-    );
-
-  const r = f(0);
-  const g = f(8);
-  const b = f(4);
-
-  return `#${((1 << 24) + (r << 16) + (g << 8) + b).toString(16).slice(1)}`;
-};
-
-// Função para inserir a cor informada na escala gerada
-const insertInputColorInScale = (
-  color: string,
-  scale: { [key: string]: string },
-  h: number,
-  s: number,
-  l: number
-) => {
-  const position = determinePositionInScale(l);
-  scale[position] = `hsl(${h}, ${s}%, ${l}%)`;
-  return scale;
-};
-
-// Função para gerar uma cor aleatória dentro da faixa de luminosidade da paleta
-const generateRandomHSLColor = () => {
-  const h = Math.floor(Math.random() * 360); // Tonalidade aleatória
-  const s = Math.floor(Math.random() * (100 - 70 + 1)) + 70; // Saturação entre 70% e 100%
-  const l = [95, 85, 75, 65, 55, 45, 35, 25, 15, 5][
-    Math.floor(Math.random() * 10)
-  ]; // Luminosidades da escala
-
-  return { h, s, l };
 };
 
 // Função para validar se a cor do input está na paleta
@@ -135,22 +54,12 @@ const validateInputColor = (
   inputColor: string,
   scale: { [key: string]: string }
 ): boolean => {
-  const { h, s, l } = hexToHSL(inputColor); // Converte a cor de input para HSL
-  const inputColorHex = hslToHex(h, s, l); // Converte HSL de volta para HEX para comparação
+  const inputColorHex = chroma(inputColor).hex(); // Usa chroma.js para converter para HEX
 
   // Verifica se a cor de input está na escala
-  for (const key in scale) {
-    const hslValues = scale[key]
-      .match(/\d+/g)
-      ?.map((value) => parseInt(value, 10)) as [number, number, number];
-    const hexValue = hslToHex(hslValues[0], hslValues[1], hslValues[2]);
-
-    // Se a cor do input está na escala, retorna true
-    if (hexValue.toLowerCase() === inputColorHex.toLowerCase()) {
-      return true;
-    }
-  }
-  return false;
+  return Object.values(scale).some(
+    (color) => chroma(color).hex() === inputColorHex
+  );
 };
 
 export default function ColorPalette() {
@@ -160,6 +69,7 @@ export default function ColorPalette() {
   const [error, setError] = useState<string>("");
   const [isFocused, setIsFocused] = useState<boolean>(false);
   const [copiedColor, setCopiedColor] = useState<string | null>(null);
+  const [hovered, setHovered] = useState<boolean>(false);
 
   const { toast } = useToast();
 
@@ -169,13 +79,7 @@ export default function ColorPalette() {
   // Função para gerar a escala de cores
   const generateColorScale = (color: string) => {
     try {
-      // eslint-disable-next-line @typescript-eslint/no-unused-vars
-      const { h, s, l } = hexToHSL(color); // Converte Hex para HSL
-      let scale = generatePalette(h, s, l); // Gera a paleta de cores com base em HSL
-
-      // Insere a cor informada na escala de cores
-      scale = insertInputColorInScale(color, scale, h, s, l);
-
+      const scale = generatePalette(color); // Gera a paleta de cores com chroma.js
       setColorScale(scale); // Atualiza a paleta
 
       // Obter o nome da cor usando color-namer
@@ -207,7 +111,7 @@ export default function ColorPalette() {
 
       // Exibe o toast quando a cor for copiada
       toast({
-        title: `${hexValue} copied to clipboard!`,
+        title: `${hexValue} copiado para a área de transferência!`,
         duration: 3000,
       });
 
@@ -216,41 +120,10 @@ export default function ColorPalette() {
   };
 
   useEffect(() => {
-    // Gerar cor HSL aleatória ao carregar a página
-    const randomHSL = generateRandomHSLColor();
-    const initialColor = hslToHex(randomHSL.h, randomHSL.s, randomHSL.l);
-    setInputColor(initialColor); // Atualiza a cor aleatória gerada como estado inicial
-    generateColorScale(initialColor); // Gera a paleta com base nessa cor aleatória
-  }, []);
-
-  useEffect(() => {
-    // Função para gerar uma cor válida e garantir que está na paleta
-    const ensureValidColorInPalette = () => {
-      let isValid = false;
-      let randomColor = "";
-
-      while (!isValid) {
-        // Gera uma cor aleatória
-        const randomHSL = generateRandomHSLColor();
-        randomColor = hslToHex(randomHSL.h, randomHSL.s, randomHSL.l);
-
-        // Gera a escala com base nessa cor
-        const { h, s, l } = randomHSL;
-        const scale = generatePalette(h, s, l);
-
-        // Verifica se a cor aleatória está na paleta gerada
-        isValid = validateInputColor(randomColor, scale);
-        if (isValid) {
-          setColorScale(scale); // Atualiza a paleta
-        }
-      }
-
-      // Atualiza o estado com a cor válida
-      setInputColor(randomColor);
-    };
-
-    // Executa a função ao carregar o componente
-    ensureValidColorInPalette();
+    // Gerar cor aleatória ao carregar a página
+    const randomColor = chroma.random().hex();
+    setInputColor(randomColor); // Define a cor inicial
+    generateColorScale(randomColor); // Gera a escala de cores
   }, []);
 
   return (
@@ -299,16 +172,12 @@ export default function ColorPalette() {
         <h4 className="scroll-m-20 text-lg font-semibold tracking-tight text-gray-600">
           {colorName}
         </h4>
-        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
+        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-9 gap-1">
           {Object.entries(colorScale).map(([key, color]) => {
             const textColor =
-              Number(key) <= 400 ? colorScale["950"] : colorScale["50"];
+              Number(key) <= 400 ? colorScale["900"] : colorScale["50"];
 
-            // Extrair os valores H, S, L da string HSL para converter para HEX
-            const hslValues = color
-              .match(/\d+/g)
-              ?.map((value) => parseInt(value, 10)) as [number, number, number];
-            const hexValue = hslToHex(hslValues[0], hslValues[1], hslValues[2]);
+            const hexValue = chroma(color).hex(); // Converter para HEX usando chroma.js
 
             // Comparar a cor HEX da paleta com o inputColor
             const isInputColor =
@@ -326,7 +195,24 @@ export default function ColorPalette() {
                 >
                   <div className="flex flex-col h-full justify-end items-center gap-1 pb-3">
                     {isInputColor && (
-                      <Lock width={16} style={{ color: textColor }} />
+                      <div
+                        className="relative flex items-center justify-center"
+                        onMouseEnter={() => setHovered(true)}
+                        onMouseLeave={() => setHovered(false)}
+                      >
+                        {!hovered && (
+                          <Lock width={16} style={{ color: textColor }} />
+                        )}
+                        {/* Tooltip - "Locked" aparece quando hover */}
+                        {hovered && (
+                          <p
+                            className="text-[11px] capitalize sm:text-[9.5px] md:text-[11px]"
+                            style={{ color: textColor }}
+                          >
+                            Locked
+                          </p>
+                        )}
+                      </div>
                     )}
                     <p
                       className="text-sm font-semibold"
@@ -334,12 +220,6 @@ export default function ColorPalette() {
                     >
                       {`${key}`}
                     </p>
-                    {/* <p
-                      className="text-xs uppercase"
-                      style={{ color: textColor }}
-                    >
-                      {`${color}`}
-                    </p> */}
                     <p
                       className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px]"
                       style={{ color: textColor }}
