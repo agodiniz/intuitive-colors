@@ -3,6 +3,7 @@
 import { useEffect, useState } from "react";
 import namer from "color-namer";
 import chroma from "chroma-js";
+import html2canvas from "html2canvas";
 
 import { Input } from "@/components/ui/input";
 import { useToast } from "@/hooks/use-toast";
@@ -14,14 +15,14 @@ import {
   DropdownMenuRadioItem,
   DropdownMenuTrigger,
   DropdownMenuSeparator,
+  DropdownMenuGroup,
+  DropdownMenuItem,
 } from "@/components/ui/dropdown-menu";
 import {
   Dialog,
   DialogContent,
-  DialogDescription,
   DialogHeader,
   DialogTitle,
-  DialogTrigger,
 } from "@/components/ui/dialog";
 
 import { ChevronsUpDown, Clipboard, Lock } from "lucide-react";
@@ -74,6 +75,7 @@ export default function ColorPalette() {
   const [hovered, setHovered] = useState<boolean>(false);
   const [format, setFormat] = useState<string>("hex"); // Estado para controlar o formato
   const [modalOpen, setModalOpen] = useState<boolean>(false); // Estado do modal
+  const [exportFormat, setExportFormat] = useState<string>("png"); // Estado para exportFormat
 
   const { toast } = useToast();
 
@@ -169,6 +171,47 @@ export default function ColorPalette() {
     setInputColor(getColorInFormat(inputColor, value)); // Converte a cor para o novo formato // Converte a cor para o novo formato
   };
 
+  // Função para exportar como PNG usando html2canvas
+  const exportAsPNG = () => {
+    const paletteElement = document.getElementById("palette") as HTMLElement;
+    if (paletteElement) {
+      html2canvas(paletteElement).then((canvas) => {
+        const link = document.createElement("a");
+        link.download = "palette.png";
+        link.href = canvas.toDataURL();
+        link.click();
+      });
+    }
+  };
+
+  // Função para exportar como SVG
+  const exportAsSVG = () => {
+    const svgContent = `
+      <svg xmlns="http://www.w3.org/2000/svg" width="500" height="500">
+        ${Object.entries(colorScale)
+          .map(
+            ([key, color], index) => `
+              <rect width="50" height="50" x="${index * 50}" fill="${color}" />
+            `
+          )
+          .join("")}
+      </svg>
+    `;
+    const blob = new Blob([svgContent], { type: "image/svg+xml" });
+    const link = document.createElement("a");
+    link.download = "palette.svg";
+    link.href = URL.createObjectURL(blob);
+    link.click();
+  };
+
+  const handleExport = () => {
+    if (exportFormat === "png") {
+      exportAsPNG();
+    } else if (exportFormat === "svg") {
+      exportAsSVG();
+    }
+  };
+
   return (
     <div className="max-w-5xl px-6 pb-12 mx-auto space-y-8">
       <div className="flex justify-center items-center gap-2">
@@ -248,9 +291,37 @@ export default function ColorPalette() {
             {colorName}
           </h4>
           <div className="flex justify-center items-center">
-            <Button variant="ghost" onClick={() => setModalOpen(true)}>
-              Code
-            </Button>
+            <div className="flex">
+              <Button variant="ghost" onClick={() => setModalOpen(true)}>
+                Code
+              </Button>
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="ghost" className="gap-2">
+                    Export
+                    {/* <ChevronsUpDown width={16} height={16} /> */}
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent className="">
+                  {/* <DropdownMenuLabel>Format</DropdownMenuLabel>
+                  <DropdownMenuSeparator /> */}
+                  <DropdownMenuGroup>
+                    <DropdownMenuItem
+                      onClick={handleExport}
+                      className="cursor-pointer"
+                    >
+                      <span>PNG</span>
+                    </DropdownMenuItem>
+                    <DropdownMenuItem
+                      onClick={handleExport}
+                      className="cursor-pointer"
+                    >
+                      <span>SVG</span>
+                    </DropdownMenuItem>
+                  </DropdownMenuGroup>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
 
             <Dialog open={modalOpen} onOpenChange={setModalOpen}>
               <DialogContent className="px-0 pt-4">
@@ -276,61 +347,63 @@ export default function ColorPalette() {
           </div>
         </div>
 
-        <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
-          {Object.entries(colorScale).map(([key, color]) => {
-            const textColor =
-              Number(key) <= 500 ? colorScale["900"] : colorScale["50"];
-            const hexValue = chroma(color).hex();
+        <div id="palette" className="flex h-[1100px] md:h-auto">
+          <div className="grid grid-cols-1 w-full h-24 sm:grid-cols-11 gap-1">
+            {Object.entries(colorScale).map(([key, color]) => {
+              const textColor =
+                Number(key) <= 500 ? colorScale["900"] : colorScale["50"];
+              const hexValue = chroma(color).hex();
 
-            const isInputColor =
-              getColorInFormat(hexValue, format).toLowerCase() ===
-              getColorInFormat(inputColor, format).toLowerCase();
-            const isCopiedColor = hexValue === copiedColor;
+              const isInputColor =
+                getColorInFormat(hexValue, format).toLowerCase() ===
+                getColorInFormat(inputColor, format).toLowerCase();
+              const isCopiedColor = hexValue === copiedColor;
 
-            return (
-              <div key={key} className="text-center">
-                <Button
-                  className="w-full h-24 rounded-lg cursor-pointer relative shadow-none"
-                  style={{ backgroundColor: color }}
-                  onClick={() => handleCopyColor(hexValue)}
-                >
-                  <div className="flex flex-col h-full justify-end items-center gap-1">
-                    {isInputColor && (
-                      <div
-                        className="relative flex items-center justify-center"
-                        onMouseEnter={() => setHovered(true)}
-                        onMouseLeave={() => setHovered(false)}
+              return (
+                <div key={key} className="text-center">
+                  <Button
+                    className="w-full h-24 rounded-lg cursor-pointer relative shadow-none"
+                    style={{ backgroundColor: color }}
+                    onClick={() => handleCopyColor(hexValue)}
+                  >
+                    <div className="flex flex-col h-full justify-end items-center gap-1">
+                      {isInputColor && (
+                        <div
+                          className="relative flex items-center justify-center"
+                          onMouseEnter={() => setHovered(true)}
+                          onMouseLeave={() => setHovered(false)}
+                        >
+                          {!hovered && (
+                            <Lock width={16} style={{ color: textColor }} />
+                          )}
+                          {hovered && (
+                            <p
+                              className="text-xs font-semibold capitalize"
+                              style={{ color: textColor }}
+                            >
+                              Locked
+                            </p>
+                          )}
+                        </div>
+                      )}
+                      <p
+                        className="text-sm font-semibold"
+                        style={{ color: textColor }}
                       >
-                        {!hovered && (
-                          <Lock width={16} style={{ color: textColor }} />
-                        )}
-                        {hovered && (
-                          <p
-                            className="text-xs font-semibold capitalize"
-                            style={{ color: textColor }}
-                          >
-                            Locked
-                          </p>
-                        )}
-                      </div>
-                    )}
-                    <p
-                      className="text-sm font-semibold"
-                      style={{ color: textColor }}
-                    >
-                      {`${key}`}
-                    </p>
-                    <p
-                      className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px] md:w-[62px] md:truncate"
-                      style={{ color: textColor }}
-                    >
-                      {getColorInFormat(hexValue, format)}
-                    </p>
-                  </div>
-                </Button>
-              </div>
-            );
-          })}
+                        {`${key}`}
+                      </p>
+                      <p
+                        className="text-[11px] uppercase sm:text-[9.5px] md:text-[11px] md:w-[62px] md:truncate"
+                        style={{ color: textColor }}
+                      >
+                        {getColorInFormat(hexValue, format)}
+                      </p>
+                    </div>
+                  </Button>
+                </div>
+              );
+            })}
+          </div>
         </div>
       </div>
     </div>
