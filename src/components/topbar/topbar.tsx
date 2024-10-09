@@ -9,11 +9,12 @@ import {
 } from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-import { CircleUser, Menu } from "lucide-react";
+import { CircleUser, Menu, Pipette } from "lucide-react";
 import TailwindLogo from "@/public/images/tailwind-css.png";
 
 import Link from "next/link";
 import Image from "next/image";
+import { Badge } from "../ui/badge";
 
 export default function Topbar() {
   return (
@@ -23,10 +24,13 @@ export default function Topbar() {
           href="#"
           className="flex items-center gap-2 text-lg font-semibold md:text-base"
         >
-          <Image src={TailwindLogo} alt="Logo do Windcolor UI" width={24} height={24} />
-          <span>WindHeu UI</span>
+          <div className="flex items-center justify-center bg-primary h-8 w-8 rounded-sm">
+            <Pipette width={16} height={16} className="text-secondary" />
+          </div>
+          <p className="text-base font-semibold">Pigment <span className="font-black">UI</span></p>
+          <Badge variant="secondary" className="ml-1 text-[11px] font-bold px-2 py-0 h-5 rounded-sm">Beta</Badge>
         </Link>
-        <Link
+        {/* <Link
           href="#"
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
@@ -43,7 +47,7 @@ export default function Topbar() {
           className="text-muted-foreground transition-colors hover:text-foreground"
         >
           Browser
-        </Link>
+        </Link> */}
       </nav>
       <Sheet>
         <SheetTrigger asChild>
@@ -58,10 +62,13 @@ export default function Topbar() {
               href="#"
               className="flex items-center gap-2 text-lg font-semibold"
             >
-              <Image src={TailwindLogo} alt="Logo Windcolor UI" width={24} height={24} />
-              <span>WindHeu UI</span>
+              <div className="flex items-center justify-center bg-primary h-8 w-8 rounded-sm">
+            <Pipette width={16} height={16} className="text-secondary" />
+          </div>
+          <p className="text-base font-semibold">Pigment <span className="font-black">UI</span></p>
+          <Badge variant="secondary" className="ml-1 text-[11px] font-bold px-2 py-0 h-5 rounded-sm">Beta</Badge>
             </Link>
-            <Link
+            {/* <Link
               href="#"
               className="text-muted-foreground hover:text-foreground"
             >
@@ -78,11 +85,11 @@ export default function Topbar() {
               className="text-muted-foreground hover:text-foreground"
             >
               Browser
-            </Link>
+            </Link> */}
           </nav>
         </SheetContent>
       </Sheet>
-      <div className="flex items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
+      {/* <div className="flex items-center gap-4 md:ml-auto md:gap-2 lg:gap-4">
         <DropdownMenu>
           <DropdownMenuTrigger asChild>
             <Button variant="secondary" size="icon" className="rounded-full">
@@ -99,7 +106,7 @@ export default function Topbar() {
             <DropdownMenuItem>Logout</DropdownMenuItem>
           </DropdownMenuContent>
         </DropdownMenu>
-      </div>
+      </div> */}
     </header>
   );
 }
