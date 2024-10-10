@@ -1,24 +1,14 @@
 import { Button } from "@/components/ui/button";
-import {
-  DropdownMenu,
-  DropdownMenuContent,
-  DropdownMenuItem,
-  DropdownMenuLabel,
-  DropdownMenuSeparator,
-  DropdownMenuTrigger,
-} from "@/components/ui/dropdown-menu";
 import { Sheet, SheetContent, SheetTrigger } from "@/components/ui/sheet";
 
-import { CircleUser, Menu, Pipette } from "lucide-react";
-import TailwindLogo from "@/public/images/tailwind-css.png";
+import { Menu, Pipette } from "lucide-react";
 
 import Link from "next/link";
-import Image from "next/image";
 import { Badge } from "../ui/badge";
 
 export default function Topbar() {
   return (
-    <header className="sticky top-0 flex h-16 items-center justify-between border-b bg-background px-4 md:px-6">
+    <header className="sticky top-0 flex h-16 items-center justify-between border-b bg-background px-4 z-50 md:px-6">
       <nav className="hidden flex-col justify-between text-lg font-medium md:flex md:flex-row md:items-center md:gap-5 md:text-sm lg:gap-6">
         <Link
           href="#"
