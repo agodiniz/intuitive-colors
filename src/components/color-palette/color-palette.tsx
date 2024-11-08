@@ -263,14 +263,14 @@ export default function ColorPalette() {
                   <DialogTitle>Copy code</DialogTitle>
                 </DialogHeader>
                 <div className="w-full px-4 relative">
-                  <pre className="bg-secondary p-4 rounded-md text-sm">
+                  <pre className="bg-neutral-950 text-white p-4 rounded-md text-sm">
                     {tailwindFormat(colorScale)}
                   </pre>
-                  <div className="absolute top-0 right-5">
+                  <div className="absolute top-2 right-6">
                     <Button
                       variant="ghost"
                       size="icon"
-                      className="text-primary"
+                      className="hover:bg-neutral-800 hover:text-white text-white"
                     >
                       <Clipboard width={16} onClick={handleCopyPalette} />
                     </Button>
